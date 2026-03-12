@@ -101,6 +101,12 @@ class LLMHandler:
                 logger.info(f"   Model: {self.model}")
                 logger.info(f"   Response length: {len(assistant_message)} chars")
                 logger.info(f"   Response: {assistant_message}")
+                if response.usage:
+                    logger.info(
+                        f"   Tokens — prompt: {response.usage.prompt_tokens}, "
+                        f"completion: {response.usage.completion_tokens}, "
+                        f"total: {response.usage.total_tokens}"
+                    )
                 return assistant_message
                 
             except RateLimitError as e:
