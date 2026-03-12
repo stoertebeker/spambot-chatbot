@@ -1,35 +1,51 @@
-"# Spambot-Chatbot 🤖
+"# Telegram Spam Responder Userbot 🤖
 
-Ein Telegram-Bot, der automatisch auf Spam-Nachrichten antwortet und die Spammer mit einer vordefinierten Persönlichkeit beschäftigt.
+Ein Telegram **Userbot**, der automatisch **in deinem Namen** auf Spam-Nachrichten antwortet und die Spammer mit deinem persönlichen Schreibstil beschäftigt.
+
+⚠️ **WICHTIG**: Dies ist ein Userbot, kein normaler Bot. Er läuft mit deinem Telegram-Account und kann gegen Telegrams Terms of Service verstoßen. Nutze auf eigene Gefahr!
 
 ## Features
 
-- 🎭 Vordefinierte Persönlichkeit in JSON-Datei konfigurierbar
-- 🧠 LLM-Backend via LiteLLM (unterstützt OpenAI, Anthropic, Cohere, etc.)
-- 💬 Automatische Konversationsführung mit Spammern
-- 🎯 Gezielte Aktivierung für bestimmte Chat-IDs
-- 📊 Verwaltung mehrerer Spam-Chats gleichzeitig
-- 🔒 Admin-Only Kontrolle
-- ⏱️ **Natürliches Timing** - Realistische Antwortverzögerungen
-- ⌨️ **\"Typing...\" Indikator** - Zeigt an, dass jemand tippt
-- 🎲 **Zufällige Pausen** - Gelegentlich längere Pausen (wirkt beschäftigt)
-- 🔄 **Warm Start** - Lernt deinen Schreibstil aus bisherigen Nachrichten
+- 🎭 Imitiert **deinen** Schreibstil perfekt
+- 🧠 LLM-Backend via LiteLLM (OpenAI, Anthropic, lokale Models, etc.)
+- 💬 Automatische Antworten auf whitelisted Spammer
+- 📥 Chat-Import: Lädt History und lernt deinen Stil
+- ⏱️ **Natürliches Timing** - Realistische Verzögerungen
+- ⌨️ **Typing-Indikator** - Zeigt an, dass du tippst
+- 🎲 **Zufällige Pausen** - Wirkt authentisch
+- 🔒 **Whitelist-basiert** - Nur auf ausgewählte User antworten
+- ⏸️ **Pause-Modus** - Schnell deaktivierbar
+
+## Wie es funktioniert
+
+Der Userbot läuft mit **deinem** Telegram-Account und:
+1. Hört auf **alle** eingehenden Nachrichten
+2. Antwortet nur auf **whitelisted** User
+3. Nutzt LLM um Antworten zu generieren
+4. Imitiert deinen Schreibstil (gelernt aus Chat-Historie)
+5. Antwortet mit realistischem Timing (Typing-Indikator, Pausen, etc.)
 
 ## Voraussetzungen
 
 - Python 3.8+
-- Telegram Bot Token (von [@BotFather](https://t.me/botfather))
-- OpenAI API Key (oder andere LLM-Provider)
-- Deine Telegram User ID
+- **Telegram API ID und API Hash** von [my.telegram.org](https://my.telegram.org)
+- LLM API Key (OpenAI, Anthropic, oder andere via LiteLLM)
+- Telegram Account (wird vom Userbot verwendet)
 
 ## Installation
 
-1. **Repository klonen oder herunterladen**
+1. **Repository klonen**
+   ```bash
+   git clone <repo-url>
+   cd spambot-chatbot
+   ```
 
 2. **Virtual Environment erstellen**
    ```bash
    python3 -m venv venv
-   source venv/bin/activate  # Auf macOS/Linux
+   source venv/bin/activate  # macOS/Linux
+   # oder
+   venv\\Scripts\\activate  # Windows
    ```
 
 3. **Dependencies installieren**
@@ -38,123 +54,160 @@ Ein Telegram-Bot, der automatisch auf Spam-Nachrichten antwortet und die Spammer
    ```
 
 4. **.env Datei erstellen**
-   ```bash
-   cp .env.example .env
+   
+   Erstelle eine `.env` Datei im Projekt-Root:
+   ```env
+   # Telegram API Credentials (from https://my.telegram.org)
+   TELEGRAM_API_ID=your_api_id
+   TELEGRAM_API_HASH=your_api_hash
+   
+   # LLM Configuration
+   LITELLM_MODEL=claude-haiku-4.5
+   LITELLM_API_BASE=https://your-llm-endpoint.com
+   LITELLM_API_KEY=your_llm_key
+   
+   # Or use OpenAI directly:
+   # LITELLM_MODEL=gpt-3.5-turbo
+   # OPENAI_API_KEY=your_openai_key
+   
+   # Logging
+   LOG_LEVEL=INFO
    ```
-   
-   Dann `.env` bearbeiten und ausfüllen:
-   - `TELEGRAM_BOT_TOKEN`: Von @BotFather erhalten
-   - `ADMIN_USER_ID`: Deine Telegram User ID (kannst du von @userinfobot erfahren)
-   - `OPENAI_API_KEY`: Dein OpenAI API Key
 
-5. **Persönlichkeit anpassen (optional)**
-   
-   Bearbeite `config/personality.json` um die Persona anzupassen.
+## Telegram API Credentials erhalten
 
-## Telegram Bot erstellen
-
-1. Öffne [@BotFather](https://t.me/botfather) in Telegram
-2. Sende `/newbot`
-3. Folge den Anweisungen und wähle einen Namen und Username
-4. Kopiere den Bot Token in deine `.env` Datei
-
-## Deine User ID herausfinden
-
-1. Öffne [@userinfobot](https://t.me/userinfobot) in Telegram
-2. Starte den Bot mit `/start`
-3. Der Bot zeigt dir deine User ID
-4. Kopiere die ID in deine `.env` Datei
+1. Gehe zu [my.telegram.org](https://my.telegram.org)
+2. Logge dich mit deiner Telefonnummer ein
+3. Klicke auf \"API development tools\"
+4. Erstelle eine neue Application:
+   - **App title**: z.B. \"Spam Responder\"
+   - **Short name**: z.B. \"spambot\"
+   - **Platform**: Other
+5. Kopiere **App api_id** und **App api_hash** in deine `.env`
 
 ## Verwendung
 
-1. **Bot starten**
+### Erster Start
+
+1. **Userbot starten**
    ```bash
-   python run.py
+   python -m src.main
    ```
 
-2. **Bot in Telegram öffnen**
+2. **Beim ersten Start: Login**
    
-   Suche nach deinem Bot-Username und sende `/start`
-
-3. **Spammer hinzufügen**
+   Der Userbot fragt nach:
+   - Deiner **Telefonnummer** (mit Ländercode, z.B. +49123456789)
+   - Dem **Login-Code** (wird dir per Telegram geschickt)
+   - Optional: **2FA Passwort** falls aktiviert
    
-   Wenn dich ein Spammer kontaktiert:
-   - Finde die Chat-ID (z.B. durch Weiterleiten einer Nachricht an @userinfobot)
-   - Sende an deinen Bot: `/add <chat_id>`
+   Die Session wird in `data/session.json` gespeichert. Beim nächsten Start ist kein Login mehr nötig.
+
+3. **Userbot läuft!**
    
-   Der Bot antwortet nun automatisch auf alle Nachrichten von dieser Chat-ID.
+   Der Bot hört nun auf alle eingehenden Nachrichten und antwortet automatisch auf whitelisted User.
 
-4. **Optional: Warm Start (empfohlen!)**
-   
-   Damit der Bot deinen Schreibstil imitiert:
-   - `/warmstart <chat_id>` - Aktiviert Lernmodus
-   - Leite dem Bot 5-10 DEINER Nachrichten aus dem Chat weiter
-   - `/warmstart <chat_id>` nochmal - Zeigt Stil-Analyse
-   - Dann `/add <chat_id>` - Bot übernimmt nahtlos
+### Userbot steuern
 
-5. **Weitere Befehle**
-   - `/list` - Zeigt alle aktiven Spam-Chats
-   - `/remove <chat_id>` - Entfernt einen Chat von der Liste
-   - `/reset <chat_id>` - Setzt die Konversation zurück
-   - `/timing` - Zeigt Timing-Einstellungen
-   - `/status` - Zeigt Bot-Status
-   - `/help` - Zeigt Hilfe
+**Alle Commands sendest du an \"Saved Messages\" (Chat mit dir selbst):**
 
-## 🔄 Warm Start - So funktioniert's
+#### 📥 Chat-Historie importieren (EMPFOHLEN!)
 
-Der **Warm Start** ermöglicht es dem Bot, deinen persönlichen Schreibstil zu lernen und macht ihn praktisch unerkennbar:
+```
+/import 123456789
+```
 
-### Schritt-für-Schritt:
+Der Bot:
+- Lädt die **letzten 100 Nachrichten** aus dem Chat
+- Analysiert **deinen** Schreibstil
+- Lernt den Gesprächskontext
+- Zeigt dir eine Statistik
 
-1. **Aktiviere Warm Start**
-   ```
-   /warmstart 123456789
-   ```
-   (Ersetze `123456789` mit der Chat-ID des Spammers)
-
-2. **Nachrichten weiterleiten**
-   - Öffne den Chat mit dem Spammer
-   - Wähle 5-10 DEINER Nachrichten aus
-   - Leite sie an deinen Bot weiter (Telegram Forward-Funktion)
-   - Der Bot speichert sie als Stil-Beispiele
-
-3. **Stil analysieren**
-   ```
-   /warmstart 123456789
-   ```
-   Der Bot analysiert deinen Stil und zeigt dir eine Zusammenfassung
-
-4. **Bot aktivieren**
-   ```
-   /add 123456789
-   ```
-   Jetzt übernimmt der Bot mit deinem Schreibstil!
-
-### Was wird gelernt?
-
-- ✍️ Satzlänge und -struktur
+**Was wird gelernt:**
+- ✍️ Satzlänge und Struktur
 - 😊 Emoji-Verwendung
 - 📝 Formalitätsgrad
-- 💬 Typische Ausdrücke und Redewendungen
-- ✨ Besondere Schreibgewohnheiten
+- 💬 Typische Ausdrücke
+- ✨ Deine Schreibgewohnheiten
+
+#### ➕ User zur Whitelist hinzufügen
+
+```
+/whitelist_add 123456789
+```
+
+Ab jetzt antwortet der Bot **automatisch** auf alle Nachrichten von diesem User!
+
+#### 📋 Alle Commands
+
+- `/whitelist_list` - Zeige alle whitelisted User
+- `/whitelist_remove <user_id>` - Entferne User
+- `/import <user_id>` - Importiere Chat-Historie
+- `/pause` - Pausiere alle Auto-Antworten
+- `/resume` - Fortsetzen
+- `/status` - Zeige Userbot-Status
+- `/help` - Zeige Hilfe
+
+### User-ID herausfinden
+
+**Methode 1: Mit @userinfobot**
+1. Leite eine Nachricht des Users an [@userinfobot](https://t.me/userinfobot) weiter
+2. Der Bot zeigt dir die User-ID
+
+**Methode 2: Mit /import**
+- Wenn du schon mit dem User gechattet hast, kannst du einfach `/import <user_id>` probieren
+- Der Bot sagt dir, ob die User-ID korrekt ist
+
+## 🎯 Beispiel-Workflow
+
+1. **Spammer schreibt dich an**
+   ```
+   Spammer: \"Hey, wie geht's? 😊\"
+   ```
+
+2. **Du chattest normal** (5-10 Nachrichten)
+   ```
+   Du: \"Gut, und dir?\"
+   Spammer: \"Auch gut! Hast du Interesse an...\"
+   Du: \"Kommt drauf an...\"
+   ```
+
+3. **Import starten** (in Saved Messages)
+   ```
+   /import 123456789
+   ```
+   Bot: \"✅ Import complete! 15 messages (8 yours, 7 theirs)\"
+
+4. **Whitelist aktivieren**
+   ```
+   /whitelist_add 123456789
+   ```
+
+5. **Bot übernimmt!**
+   ```
+   Spammer: \"Also, bist du dabei?\"
+   Bot (als du): \"Mhh weiß nicht... 🤔\"
+   ```
+   
+   Der Spammer merkt **NICHTS**! 😎
 
 ## ⏱️ Natürliches Timing
 
 Der Bot verhält sich wie ein echter Mensch:
 
-- **Leseverzögerung**: 1-3 Sekunden bevor er zu tippen beginnt
-- **Typing-Indikator**: Zeigt \"tippt...\" während der Bot \"schreibt\"
-- **Realistische Tippgeschwindigkeit**: 3.5-6 Zeichen pro Sekunde
+- **Leseverzögerung**: 1-3 Sekunden vor dem Tippen
+- **Typing-Indikator**: Zeigt \"tippt...\" während der Bot schreibt
+- **Realistische Geschwindigkeit**: 3.5-6 Zeichen/Sekunde
 - **Zufällige Variation**: Mal schneller, mal langsamer
-- **Gelegentliche Pausen**: 15% Chance auf 30 Sekunden - 3 Minuten Pause (wirkt beschäftigt)
+- **Gelegentliche Pausen**: 15% Chance auf 30s-3min Pause
 
-**Beispiel:**
-- Kurze Nachricht (20 Zeichen): ~3-5 Sekunden Verzögerung
-- Mittlere Nachricht (100 Zeichen): ~5-8 Sekunden Verzögerung
-- Lange Nachricht (200 Zeichen): ~8-15 Sekunden Verzögerung
-- Mit langer Pause: +30 Sekunden bis 3 Minuten extra
+**Beispiel-Timings:**
+- Kurze Nachricht (20 Zeichen): ~3-5 Sekunden
+- Mittlere Nachricht (100 Zeichen): ~5-8 Sekunden
+- Lange Nachricht (200 Zeichen): ~8-15 Sekunden
+- Mit langer Pause: +30s bis 3min extra
 
-Dadurch ist praktisch **nicht erkennbar**, dass ein Bot antwortet!
+→ Praktisch **nicht erkennbar** als Bot! 🎭
 
 ## 🎭 Persönlichkeit anpassen
 
@@ -162,20 +215,38 @@ Bearbeite `config/personality.json`:
 
 ```json
 {
-  \"name\": \"Lisa\",
-  \"age\": 28,
-  \"occupation\": \"Marketing Managerin\",
-  \"interests\": [\"Reisen\", \"Yoga\", \"Kochen\"],
-  \"personality_traits\": [\"freundlich\", \"neugierig\"],
-  \"background\": \"Dein Background Text...\",
-  \"conversation_style\": \"Beschreibung des Gesprächsstils...\",
-  \"system_prompt\": \"Der System-Prompt für das LLM...\"
+  \"name\": \"Max\",
+  \"age\": 25,
+  \"occupation\": \"Student\",
+  \"interests\": [\"Gaming\", \"Musik\", \"Sport\"],
+  \"personality_traits\": [\"entspannt\", \"humorvoll\"],
+  \"background\": \"Student aus Berlin...\",
+  \"conversation_style\": \"Locker, nutzt Umgangssprache...\",
+  \"system_prompt\": \"Du bist Max, ein 25-jähriger Student...\"
 }
 ```
 
-## Andere LLM-Provider verwenden
+## 🔧 Timing anpassen
 
-LiteLLM unterstützt viele Provider. Beispiele:
+Bearbeite `config/timing.json`:
+
+```json
+{
+  \"min_delay\": 2.0,
+  \"max_delay\": 8.0,
+  \"chars_per_second_min\": 3.5,
+  \"chars_per_second_max\": 6.0,
+  \"long_pause_chance\": 0.15,
+  \"long_pause_min\": 30,
+  \"long_pause_max\": 180,
+  \"reading_delay_min\": 1.0,
+  \"reading_delay_max\": 3.0
+}
+```
+
+## 🤖 Andere LLM-Provider nutzen
+
+LiteLLM unterstützt viele Provider:
 
 **Anthropic (Claude):**
 ```env
@@ -183,7 +254,7 @@ LITELLM_MODEL=claude-3-sonnet-20240229
 ANTHROPIC_API_KEY=your_key
 ```
 
-**Local LLM (Ollama):**
+**Lokaler LLM (Ollama):**
 ```env
 LITELLM_MODEL=ollama/llama2
 ```
@@ -195,51 +266,134 @@ AZURE_API_KEY=your_key
 AZURE_API_BASE=your_endpoint
 ```
 
-Siehe [LiteLLM Dokumentation](https://docs.litellm.ai/docs/providers) für alle Provider.
+Siehe [LiteLLM Docs](https://docs.litellm.ai/docs/providers) für alle Provider.
 
-## 🎯 Beispiel-Workflow
+## ⚠️ Sicherheit & Risiken
 
-1. Spammer schreibt: \"Hey, wie geht's?\"
-2. Du antwortest ein paar Mal normal
-3. Du aktivierst `/warmstart 123456789`
-4. Du leitest deine letzten 5-10 Nachrichten weiter
-5. Bot analysiert: \"Kurze Sätze, viele Emojis 😊, lockerer Stil\"
-6. Du aktivierst `/add 123456789`
-7. Bot übernimmt nahtlos - Spammer merkt nichts!
+### KRITISCH:
 
-## Sicherheitshinweise
+- ❌ Dies ist ein **Userbot** - läuft mit deinem Account!
+- ❌ **Verstößt gegen Telegram ToS** - Risiko eines Account-Bans!
+- ❌ Telegram kann deinen Account **permanent sperren**
+- ⚠️ Nutze auf **eigene Gefahr**
 
-⚠️ **Wichtig:**
-- Teile niemals deinen `.env` File oder API Keys
-- Die `.env` Datei ist in `.gitignore` und wird nicht committed
-- Nur du (Admin) kannst den Bot steuern
-- Der Bot antwortet NUR auf Chat-IDs, die du explizit hinzufügst
+### Empfehlungen:
 
-## Troubleshooting
+- ✅ Nutze einen **Zweit-Account** zum Testen
+- ✅ Nur **wenige** User whitelisten
+- ✅ Natürliches Timing nutzen (ist eingebaut)
+- ✅ Bei Rate-Limit-Warnung: `/pause` nutzen
+- ✅ Nicht zu viele Nachrichten pro Tag
 
-**Bot antwortet nicht:**
-- Prüfe ob der Bot läuft (`python run.py`)
-- Prüfe ob die Chat-ID mit `/add` hinzugefügt wurde
-- Prüfe die Logs in der Konsole
+### Generelle Sicherheit:
 
-**LLM Fehler:**
-- Prüfe ob `OPENAI_API_KEY` korrekt gesetzt ist
-- Prüfe ob du Guthaben auf deinem OpenAI Account hast
-- Prüfe die Logs für detaillierte Fehlermeldungen
+- 🔒 Teile niemals `.env` oder API Keys
+- 🔒 `.env` ist in `.gitignore`
+- 🔒 `data/session.json` ist sensibel - nicht teilen!
+- 🔒 Bot antwortet nur auf whitelisted User
+- 🔒 Logs werden in `logs/` gespeichert
 
-**Telegram Fehler:**
-- Prüfe ob `TELEGRAM_BOT_TOKEN` korrekt ist
-- Prüfe ob `ADMIN_USER_ID` korrekt ist (Zahl ohne Anführungszeichen)
+## 🐛 Troubleshooting
 
-**Warm Start funktioniert nicht:**
-- Stelle sicher, dass du DEINE Nachrichten weiterleitest, nicht die des Spammers
-- Leite mindestens 5 Nachrichten weiter
-- Verwende `/warmstart <chat_id>` zweimal (einmal aktivieren, einmal analysieren)
+**Userbot antwortet nicht:**
+- ✓ Prüfe ob Userbot läuft (`python -m src.main`)
+- ✓ Prüfe ob User mit `/whitelist_add` hinzugefügt wurde
+- ✓ Prüfe ob `/pause` aktiv ist (mit `/resume` fortsetzen)
+- ✓ Schaue in die Logs (`logs/bot.log`)
 
-## Lizenz
+**Login-Probleme:**
+- ✓ Prüfe `TELEGRAM_API_ID` und `TELEGRAM_API_HASH` in `.env`
+- ✓ Lösche `data/session.json` und starte neu
+- ✓ Prüfe ob 2FA aktiviert ist (Passwort bereithalten)
+- ✓ Telefonnummer mit Ländercode angeben (+49...)
 
-MIT License - siehe LICENSE Datei
+**LLM-Fehler:**
+- ✓ Prüfe LLM API Keys in `.env`
+- ✓ Prüfe `LITELLM_MODEL` Konfiguration
+- ✓ Prüfe Guthaben auf LLM-Account
+- ✓ Schaue in Logs für Details
 
-## Haftungsausschluss
+**Import funktioniert nicht:**
+- ✓ Prüfe ob User-ID korrekt ist
+- ✓ Stelle sicher, dass du mit dem User schon gechattet hast
+- ✓ Prüfe Logs für Fehlerdetails
 
-Dieses Tool dient nur zu Bildungs- und Unterhaltungszwecken. Nutze es verantwortungsvoll."
+**Rate-Limit von Telegram:**
+- ✓ Sende `/pause` in Saved Messages
+- ✓ Warte 1-2 Stunden
+- ✓ Sende `/resume` zum Fortsetzen
+- ✓ Reduziere Anzahl whitelisted User
+
+## 📁 Projektstruktur
+
+```
+spambot-chatbot/
+├── src/
+│   ├── userbot.py           # Haupt-Userbot (Telethon)
+│   ├── llm_handler.py       # LLM Integration
+│   ├── personality.py       # Persönlichkeits-Manager
+│   ├── storage.py           # Persistenz (State, Session)
+│   ├── timing_manager.py    # Timing-Konfiguration
+│   ├── logger.py            # Logging Setup
+│   └── main.py              # Entry Point
+├── config/
+│   ├── personality.json     # Persönlichkeits-Konfiguration
+│   └── timing.json          # Timing-Konfiguration
+├── data/
+│   ├── bot_state.json       # Whitelist, Style Examples
+│   └── session.json         # Telegram Session (sensibel!)
+├── logs/
+│   └── bot.log              # Log-Datei
+├── .env                     # Environment Variables (sensibel!)
+├── .gitignore
+├── requirements.txt
+└── README.md
+```
+
+## 📊 Logging
+
+Der Bot loggt alle wichtigen Events:
+
+**In Console und `logs/bot.log`:**
+- 📨 Eingehende Nachrichten (User-ID, Username, Text)
+- 📤 Ausgehende Nachrichten (Antworten)
+- 🧠 LLM-Requests und Responses
+- ➕ Whitelist-Änderungen
+- ⏱️ Timing-Details (Delays, Typing-Dauer)
+- ⚠️ Fehler und Warnungen
+
+**Log-Level in `.env` ändern:**
+```env
+LOG_LEVEL=DEBUG  # Sehr detailliert
+LOG_LEVEL=INFO   # Normal (empfohlen)
+LOG_LEVEL=WARNING  # Nur Warnungen
+```
+
+## 🚀 Nächste Schritte
+
+Nach der Installation:
+
+1. ✅ `.env` konfigurieren
+2. ✅ `python -m src.main` starten
+3. ✅ Mit Telegram-Account einloggen
+4. ✅ `/help` in Saved Messages senden
+5. ✅ Ersten Chat mit `/import` importieren
+6. ✅ Mit `/whitelist_add` aktivieren
+7. ✅ Zusehen wie der Bot arbeitet! 😎
+
+## 📝 Lizenz
+
+MIT License
+
+## ⚠️ Disclaimer
+
+Dieses Tool dient nur zu Bildungs- und Unterhaltungszwecken. 
+
+- Nutze es **verantwortungsvoll**
+- Verstößt gegen **Telegram ToS**
+- Autor übernimmt **keine Haftung** für Bans oder Schäden
+- Nutze auf **eigene Gefahr**
+- Empfehlung: **Zweit-Account** verwenden
+
+**Du wurdest gewarnt!** ⚠️
+"

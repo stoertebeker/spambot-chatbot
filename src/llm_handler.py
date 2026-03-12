@@ -64,8 +64,12 @@ class LLMHandler:
         Returns:
             LLM's response
         """
+        logger.info(f"🧠 LLM Request for chat {chat_id}")
+        logger.info(f"   User message: {user_message}")
+        
         # Get conversation history
         messages = self._get_conversation(chat_id)
+        logger.info(f"   Conversation length: {len(messages)} messages")
         
         # Add user message
         messages.append({"role": "user", "content": user_message})
@@ -80,7 +84,7 @@ class LLMHandler:
                     model=self.model,
                     messages=messages,
                     temperature=0.8,  # Etwas kreativere Antworten
-                    max_tokens=500
+                    max_tokens=150  # Kürzere Antworten (1-2 Sätze)
                 )
                 
                 # Extract response
@@ -93,7 +97,10 @@ class LLMHandler:
                 if len(messages) > 21:
                     self.conversation_history[chat_id] = [messages[0]] + messages[-20:]
                 
-                logger.info(f"LLM response generated successfully (length: {len(assistant_message)})")
+                logger.info(f"✅ LLM response generated successfully")
+                logger.info(f"   Model: {self.model}")
+                logger.info(f"   Response length: {len(assistant_message)} chars")
+                logger.info(f"   Response: {assistant_message}")
                 return assistant_message
                 
             except RateLimitError as e:

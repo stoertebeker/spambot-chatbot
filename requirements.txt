@@ -1,5 +1,6 @@
-# Telegram Bot Framework
-python-telegram-bot==21.0.1
+# Telegram Userbot Framework
+telethon==1.34.0
+# cryptg==0.4.0  # Optional: Speeds up crypto, requires Rust compiler
 
 # LLM Backend
 litellm==1.50.0
@@ -7,5 +8,3 @@ litellm==1.50.0
 # Environment Variables
 python-dotenv==1.0.0
 
-# Utility
-aiofiles==23.2.1

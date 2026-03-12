@@ -96,3 +96,36 @@ class BotStorage:
         if self.filepath.exists():
             self.filepath.unlink()
             logger.info("State cleared")
+    
+    def save_session(self, session_string: str) -> None:
+        """Save Telethon session string.
+        
+        Args:
+            session_string: Telethon session string for persistent login
+        """
+        session_file = self.filepath.parent / "session.json"
+        try:
+            with open(session_file, 'w', encoding='utf-8') as f:
+                json.dump({"session": session_string}, f)
+            logger.info("Session string saved")
+        except Exception as e:
+            logger.error(f"Failed to save session: {e}")
+    
+    def load_session(self) -> str:
+        """Load Telethon session string.
+        
+        Returns:
+            Session string or empty string if not found
+        """
+        session_file = self.filepath.parent / "session.json"
+        if not session_file.exists():
+            return ""
+        
+        try:
+            with open(session_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            logger.info("Session string loaded")
+            return data.get("session", "")
+        except Exception as e:
+            logger.error(f"Failed to load session: {e}")
+            return ""

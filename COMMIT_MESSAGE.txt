@@ -1,0 +1,93 @@
+"Refactor: Migration von Telegram Bot zu Userbot
+
+BREAKING CHANGE: Komplette Umstellung von python-telegram-bot auf Telethon Userbot
+
+## Hauptänderungen
+
+### Entfernt
+- src/telegram_bot.py - Alter Bot-Code
+- run.py - Alter Entry Point
+- Alle Dokumentations-MD-Dateien (außer README)
+- test_setup.py
+
+### Hinzugefügt
+- src/userbot.py - Neuer Telethon-basierter Userbot
+- README.md - Komplett neu geschrieben
+- SETUP.md - Detaillierte Setup-Anleitung
+- MIGRATION.md - Migration Guide vom alten Bot
+- PROJECT_STATUS.md - Projekt-Status und Dokumentation
+
+### Geändert
+- src/main.py - Angepasst für Userbot mit Telethon
+- src/storage.py - Session-String-Support hinzugefügt
+- src/llm_handler.py - Erweiterte Logging-Funktionalität
+- requirements.txt - Telethon statt python-telegram-bot
+
+### Beibehalten (unverändert)
+- src/timing_manager.py
+- src/logger.py
+- src/personality.py
+- config/personality.json
+- config/timing.json
+- .gitignore
+
+## Funktionale Änderungen
+
+### Von Bot zu Userbot
+- **Vorher**: Separater Bot-Account, Spammer müssen Bot anschreiben
+- **Jetzt**: Läuft mit User-Account, antwortet in User's Namen
+
+### Neue Features
+- Chat-Import: Automatisches Lernen des Schreibstils aus Historie
+- Session-Persistenz: Kein Login bei jedem Start nötig
+- Whitelist-System: Nur auf ausgewählte User antworten
+- Pause/Resume: Schnelles Deaktivieren der Auto-Antworten
+
+### Neue Commands (an Saved Messages senden)
+- /import <user_id> - Chat-Historie importieren
+- /whitelist_add <user_id> - User zur Whitelist hinzufügen
+- /whitelist_remove <user_id> - User entfernen
+- /whitelist_list - Alle whitelisted User anzeigen
+- /pause - Auto-Antworten pausieren
+- /resume - Fortsetzen
+- /status - Bot-Status
+- /help - Hilfe
+
+### Environment Variables
+- TELEGRAM_BOT_TOKEN → TELEGRAM_API_ID (NEU)
+- ADMIN_USER_ID → Entfernt
+- TELEGRAM_API_HASH (NEU)
+
+## Sicherheitshinweise
+
+⚠️ WICHTIG: Userbot verstößt gegen Telegram ToS!
+- Risiko eines Account-Bans
+- Empfohlen: Zweit-Account zum Testen verwenden
+- Alle Sicherheitshinweise in README.md beachten
+
+## Migration
+
+Für Nutzer des alten Bots:
+1. Siehe MIGRATION.md für detaillierte Schritte
+2. data/bot_state.json bleibt kompatibel
+3. .env muss angepasst werden (siehe SETUP.md)
+
+## Testing Status
+
+- [x] Code kompiliert ohne Fehler
+- [x] Projektstruktur aufgeräumt
+- [x] Dokumentation vollständig
+- [ ] Funktionale Tests ausstehend
+
+## Dokumentation
+
+- README.md - Vollständige Projekt-Dokumentation
+- SETUP.md - Schritt-für-Schritt Setup-Anleitung
+- MIGRATION.md - Migration vom alten Bot
+- PROJECT_STATUS.md - Technische Details und Status
+
+---
+
+Version: 3.0 (Userbot)
+Breaking Change: Ja (komplette Neuimplementierung)
+Kompatibilität: Daten teilweise kompatibel, Code nicht kompatibel"
