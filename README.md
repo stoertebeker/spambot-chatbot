@@ -36,7 +36,7 @@ Der Userbot läuft mit **deinem** Telegram-Account und:
 
 1. **Repository klonen**
    ```bash
-   git clone <repo-url>
+   git clone https://github.com/stoertebeker/spambot-chatbot.git
    cd spambot-chatbot
    ```
 
@@ -55,20 +55,25 @@ Der Userbot läuft mit **deinem** Telegram-Account und:
 
 4. **.env Datei erstellen**
    
-   Erstelle eine `.env` Datei im Projekt-Root:
+   Kopiere `.env.example` zu `.env` und fülle die Werte aus:
+   ```bash
+   cp .env.example .env
+   ```
+   
+   Dann bearbeite `.env`:
    ```env
    # Telegram API Credentials (from https://my.telegram.org)
-   TELEGRAM_API_ID=your_api_id
-   TELEGRAM_API_HASH=your_api_hash
+   TELEGRAM_API_ID=12345678
+   TELEGRAM_API_HASH=abcdef1234567890abcdef1234567890
    
-   # LLM Configuration
-   LITELLM_MODEL=claude-haiku-4.5
-   LITELLM_API_BASE=https://your-llm-endpoint.com
-   LITELLM_API_KEY=your_llm_key
+   # LLM Configuration - OpenAI-compatible endpoint
+   LITELLM_MODEL=openai/claude-haiku-4.5
+   OPENAI_API_KEY=your_api_key_here
+   OPENAI_API_BASE=https://your-llm-endpoint.com/v1
    
    # Or use OpenAI directly:
    # LITELLM_MODEL=gpt-3.5-turbo
-   # OPENAI_API_KEY=your_openai_key
+   # OPENAI_API_KEY=sk-your-openai-key-here
    
    # Logging
    LOG_LEVEL=INFO

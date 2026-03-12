@@ -32,7 +32,7 @@ Siehe https://docs.litellm.ai/docs/providers
 
 ```bash
 # Repository klonen
-git clone <repo-url>
+git clone https://github.com/stoertebeker/spambot-chatbot.git
 cd spambot-chatbot
 
 # Virtual Environment erstellen
