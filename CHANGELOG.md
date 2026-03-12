@@ -1,6 +1,84 @@
 # Changelog
 
-## Version 2.0 - "Natürlich & Unauffällig" (Aktuell)
+## Version 2.1 - "Production-Ready" (Aktuell)
+
+### 🎉 Neue Features
+
+#### 💾 Persistenz-System
+- **Automatisches Speichern**: Bot-State in `data/bot_state.json`
+- **Überlebt Neustarts**: Active Targets und Style-Beispiele bleiben erhalten
+- **Kein Setup nötig**: Automatisch aktiviert
+- **JSON-Format**: Menschenlesbar und editierbar
+- Neue Datei: `src/storage.py`
+
+#### 📝 Logging-System
+- **Strukturierte Logs**: Zeitstempel, Logger-Name, Level, Nachricht
+- **Log-Rotation**: Automatisch bei 10MB, 5 Backup-Dateien
+- **Mehrere Ausgaben**: Console + Log-Datei
+- **Konfigurierbar**: Log-Level via `LOG_LEVEL` in .env
+- **Speicherort**: `logs/bot.log`
+- Neue Dateien: `src/logger.py`
+
+#### 🔧 Konfigurierbare Timing-Parameter
+- **Externe Konfiguration**: `config/timing.json`
+- **Hot-Reload**: Änderungen beim Bot-Start aktiv
+- **Alle Parameter anpassbar**: Delays, Typing-Speed, Pausen
+- **Default-Config**: Wird automatisch erstellt
+- Neue Datei: `src/timing_manager.py`
+
+#### 🔄 Verbessertes Error Handling
+- **Retry-Logik**: Automatische Wiederholungen bei Fehlern
+- **Exponential Backoff**: Intelligente Wartezeiten
+- **Spezifische Exceptions**: Rate-Limits, Timeouts, etc.
+- **Bessere Error-Messages**: Detaillierte Logs
+- **Fallback-Antworten**: Bot bleibt immer responsiv
+
+#### ✅ Environment Validation
+- **Vollständige Prüfung**: Alle Variablen werden validiert
+- **Hilfreiche Fehler**: Zeigt genau was fehlt
+- **Start-Sicherheit**: Bot startet nur bei vollständiger Config
+
+### 🔧 Verbesserungen
+
+- **Storage Integration**: Alle Commands nutzen Persistenz
+- **Logging überall**: Alle Module loggen strukturiert
+- **Bessere Fehlerbehandlung**: In allen LLM-Requests
+- **Graceful Shutdown**: State wird beim Beenden gespeichert
+- **Neue .env Optionen**: `LOG_LEVEL`, explizites `LITELLM_MODEL`
+- **Erweiterte .gitignore**: Logs und Data-Verzeichnisse
+
+### 📦 Neue Dateien
+
+```
+src/storage.py          # Persistenz-Layer
+src/logger.py           # Logging-Setup
+src/timing_manager.py   # Timing-Konfiguration
+config/timing.json      # Timing-Parameter
+data/bot_state.json     # Gespeicherter State (auto-generiert)
+logs/bot.log            # Log-Datei (auto-generiert)
+UPDATE.md              # Migrations-Guide
+```
+
+### 🐛 Bugfixes
+
+- State-Verlust bei Bot-Neustart behoben
+- Fehlende Error-Logs bei LLM-Fehlern behoben
+- Race-Conditions bei Storage-Zugriff behoben
+
+### ⚠️ Breaking Changes
+
+**Keine!** Vollständig rückwärtskompatibel mit v2.0.
+
+### 📝 Migration von v2.0
+
+1. Code aktualisieren (git pull)
+2. Bot starten - neue Features funktionieren automatisch
+3. Optional: `.env` mit `LOG_LEVEL=INFO` erweitern
+4. Optional: `config/timing.json` anpassen
+
+---
+
+## Version 2.0 - "Natürlich & Unauffällig"
 
 ### 🎉 Neue Features
 
@@ -90,11 +168,12 @@ spambot-chatbot/
 
 ## Roadmap / Geplante Features
 
-### Version 2.1 (Geplant)
-- [ ] Persistente Speicherung (SQLite)
-- [ ] Konfigurierbare Timing-Parameter via Befehle
-- [ ] Statistiken pro Chat
-- [ ] Besseres Error-Handling
+### Version 2.2 (Geplant)
+- [ ] Web-Dashboard für Verwaltung
+- [ ] Statistiken pro Chat (Nachrichten-Count, Response-Times)
+- [ ] Timing-Parameter via Bot-Befehle anpassbar
+- [ ] Backup/Restore für State
+- [ ] Multi-Language Support
 
 ### Version 3.0 (Zukunft)
 - [ ] Web-Dashboard

@@ -1,0 +1,1 @@
+{"min_delay":2,"max_delay":8,"chars_per_second_min":3.5,"chars_per_second_max":6,"long_pause_chance":0.15,"long_pause_min":30,"long_pause_max":180,"reading_delay_min":1,"reading_delay_max":3}

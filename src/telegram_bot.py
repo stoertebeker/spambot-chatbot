@@ -2,6 +2,7 @@
 import os
 import random
 import asyncio
+import logging
 from telegram import Update
 from telegram.ext import (
     Application,
@@ -14,6 +15,10 @@ from typing import Set, Optional
 
 from .llm_handler import LLMHandler
 from .personality import PersonalityManager
+from .storage import BotStorage
+from .timing_manager import TimingManager
+
+logger = logging.getLogger(__name__)
 
 
 class SpambotChatbot:
@@ -22,7 +27,15 @@ class SpambotChatbot:
     def __init__(self, token: str, admin_user_id: int):
         self.token = token
         self.admin_user_id = admin_user_id
-        self.active_targets: Set[int] = set()
+        
+        logger.info("Initializing Spambot Chatbot...")
+        
+        # Initialize storage
+        self.storage = BotStorage()
+        
+        # Load saved state
+        self.active_targets, saved_style_examples = self.storage.load_state()
+        logger.info(f"Loaded {len(self.active_targets)} active targets from storage")
         
         # Initialize personality and LLM
         self.personality = PersonalityManager()
@@ -30,16 +43,35 @@ class SpambotChatbot:
             system_prompt=self.personality.get_system_prompt()
         )
         
-        # Timing configuration for natural behavior
-        self.min_delay = 2.0  # Minimum delay in seconds
-        self.max_delay = 8.0  # Maximum delay in seconds
-        self.chars_per_second = random.uniform(3.5, 6.0)  # Typing speed
-        self.occasional_long_pause_chance = 0.15  # 15% chance for long pause
-        self.long_pause_duration = (30, 180)  # 30 seconds to 3 minutes
+        # Restore saved style examples
+        if saved_style_examples:
+            self.llm.user_style_examples = saved_style_examples
+            logger.info(f"Restored style examples for {len(saved_style_examples)} chats")
+        
+        # Initialize timing manager
+        self.timing = TimingManager()
+        
+        # Load timing configuration
+        self.min_delay = self.timing.get("min_delay", 2.0)
+        self.max_delay = self.timing.get("max_delay", 8.0)
+        self.chars_per_second = random.uniform(
+            self.timing.get("chars_per_second_min", 3.5),
+            self.timing.get("chars_per_second_max", 6.0)
+        )
+        self.occasional_long_pause_chance = self.timing.get("long_pause_chance", 0.15)
+        self.long_pause_duration = (
+            self.timing.get("long_pause_min", 30),
+            self.timing.get("long_pause_max", 180)
+        )
+        
+        logger.info(f"Timing configured: {self.chars_per_second:.1f} chars/s, "
+                   f"pause chance: {self.occasional_long_pause_chance*100:.0f}%")
         
         # Build application
         self.app = Application.builder().token(token).build()
         self._register_handlers()
+        
+        logger.info("Bot initialization complete")
     
     def _register_handlers(self) -> None:
         """Register command and message handlers."""
@@ -52,6 +84,8 @@ class SpambotChatbot:
         self.app.add_handler(CommandHandler("reset", self.reset_conversation_command))
         self.app.add_handler(CommandHandler("status", self.status_command))
         self.app.add_handler(CommandHandler("warmstart", self.warm_start_command))
+        self.app.add_handler(CommandHandler("import", self.import_chat_command))
+        self.app.add_handler(CommandHandler("done", self.done_import_command))
         self.app.add_handler(CommandHandler("timing", self.timing_command))
         
         # Message handler for active targets
@@ -84,7 +118,8 @@ class SpambotChatbot:
             f"🤖 Spambot-Chatbot aktiv!\n\n"
             f"Persona: {self.personality.get_name()}\n\n"
             f"Verfügbare Befehle:\n"
-            f"/add <chat_id> - Füge einen Spammer hinzu\n"
+            f"/import - Importiere Chat-Verlauf (einfach Nachrichten weiterleiten!)\n"
+            f"/add <chat_id> - Füge einen Spammer hinzu (ohne History)\n"
             f"/remove <chat_id> - Entferne einen Spammer\n"
             f"/list - Zeige aktive Targets\n"
             f"/reset <chat_id> - Setze Konversation zurück\n"
@@ -102,12 +137,17 @@ class SpambotChatbot:
         
         help_msg = (
             "📖 Anleitung:\n\n"
-            "1. Wenn dich ein Spammer kontaktiert, kopiere die Chat-ID\n"
-            "2. Füge die Chat-ID mit /add <chat_id> hinzu\n"
-            "3. Der Bot wird automatisch auf Nachrichten antworten\n"
-            "4. Mit /remove <chat_id> kannst du den Bot stoppen\n\n"
-            "Hinweis: Die Chat-ID siehst du, wenn du eine Nachricht \n"
-            "vom Spammer weiterleitest (@userinfobot kann helfen)."
+            "**Methode 1: Mit Chat-Verlauf (empfohlen)**\n"
+            "1. Sende /import\n"
+            "2. Leite ALLE Nachrichten aus dem Spammer-Chat weiter\n"
+            "3. Sende /done wenn fertig\n"
+            "→ Bot kennt die History und deinen Stil!\n\n"
+            "**Methode 2: Ohne History**\n"
+            "1. Finde die Chat-ID (@userinfobot hilft)\n"
+            "2. Sende /add <chat_id>\n"
+            "→ Bot antwortet auf neue Nachrichten\n\n"
+            "**Stoppen:**\n"
+            "/remove <chat_id> - Bot stoppen"
         )
         await update.message.reply_text(help_msg)
     
@@ -125,6 +165,11 @@ class SpambotChatbot:
         try:
             chat_id = int(context.args[0])
             self.active_targets.add(chat_id)
+            
+            # Save state
+            self._save_state()
+            
+            logger.info(f"Added target: {chat_id}")
             await update.message.reply_text(
                 f"✅ Chat {chat_id} zur Zielliste hinzugefügt!\n"
                 f"Der Bot wird nun auf Nachrichten antworten."
@@ -147,6 +192,11 @@ class SpambotChatbot:
             chat_id = int(context.args[0])
             if chat_id in self.active_targets:
                 self.active_targets.remove(chat_id)
+                
+                # Save state
+                self._save_state()
+                
+                logger.info(f"Removed target: {chat_id}")
                 await update.message.reply_text(
                     f"✅ Chat {chat_id} von der Zielliste entfernt!"
                 )
@@ -243,18 +293,62 @@ class SpambotChatbot:
             await update.message.reply_text("❌ Ungültige Chat-ID!")
     
     async def handle_forwarded_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle forwarded messages for warm start style learning."""
+        """Handle forwarded messages for import mode."""
         if not self._is_admin(update.effective_user.id):
             return
         
-        # Check if we're in warm start mode
-        if 'warm_start_chat' not in context.user_data:
+        message_text = update.message.text
+        if not message_text:
             return
         
-        chat_id = context.user_data['warm_start_chat']
-        message_text = update.message.text
+        # Check if we're in import mode
+        if context.user_data.get('import_mode', False):
+            forward_from = update.message.forward_from
+            forward_from_chat = update.message.forward_from_chat
+            
+            # Try to determine who sent the message
+            is_from_admin = False
+            chat_id = None
+            
+            if forward_from:
+                # Message forwarded from a user
+                is_from_admin = (forward_from.id == self.admin_user_id)
+                chat_id = forward_from.id
+            elif forward_from_chat:
+                # Message forwarded from a chat/channel
+                chat_id = forward_from_chat.id
+            
+            if chat_id is None:
+                await update.message.reply_text(
+                    "⚠️ Konnte Chat-ID nicht ermitteln. Stelle sicher, dass die Nachricht weitergeleitet wurde."
+                )
+                return
+            
+            # Get timestamp from the original message
+            # forward_date is the original send time
+            timestamp = update.message.forward_date if update.message.forward_date else update.message.date
+            
+            # Store the message with timestamp
+            import_messages = context.user_data.get('import_messages', [])
+            import_messages.append({
+                'text': message_text,
+                'is_from_admin': is_from_admin,
+                'chat_id': chat_id,
+                'timestamp': timestamp
+            })
+            context.user_data['import_messages'] = import_messages
+            
+            role_icon = "👤" if is_from_admin else "💬"
+            await update.message.reply_text(
+                f"{role_icon} Nachricht #{len(import_messages)} gespeichert\n"
+                f"Wenn fertig: /done"
+            )
+            return
         
-        if message_text:
+        # Check if we're in warm start mode
+        if 'warm_start_chat' in context.user_data:
+            chat_id = context.user_data['warm_start_chat']
+            
             # Add this message as a style example
             self.llm.add_style_examples(chat_id, [message_text])
             
@@ -266,6 +360,111 @@ class SpambotChatbot:
                 f"Leite weitere Nachrichten weiter oder sende:\n"
                 f"/warmstart {chat_id} für Analyse"
             )
+            return
+    
+    async def import_chat_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Import chat history - simplified version."""
+        if not self._is_admin(update.effective_user.id):
+            return
+        
+        await update.message.reply_text(
+            "📥 **Chat Import - Super einfach!**\n\n"
+            "📝 So geht's:\n"
+            "1. Gehe zum Chat mit dem Spammer\n"
+            "2. Wähle ALLE Nachrichten aus (gedrückt halten)\n"
+            "3. Klicke 'Weiterleiten' und sende sie mir\n"
+            "4. Ich erkenne automatisch, wer wer ist\n\n"
+            "⚠️ Wichtig: Leite die Nachrichten in der richtigen Reihenfolge weiter\n"
+            "(von alt nach neu)\n\n"
+            "Wenn du fertig bist, sende: /done"
+        )
+        
+        # Activate import mode
+        context.user_data['import_mode'] = True
+        context.user_data['import_messages'] = []
+    
+    async def done_import_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Finalize the chat import."""
+        if not self._is_admin(update.effective_user.id):
+            return
+        
+        if not context.user_data.get('import_mode', False):
+            await update.message.reply_text(
+                "❌ Kein aktiver Import.\n"
+                "Starte erst mit /import"
+            )
+            return
+        
+        import_messages = context.user_data.get('import_messages', [])
+        
+        if not import_messages:
+            await update.message.reply_text(
+                "❌ Keine Nachrichten zum Importieren.\n"
+                "Leite zuerst Nachrichten weiter!"
+            )
+            return
+        
+        # Determine the chat_id (should be consistent across all messages)
+        chat_id = import_messages[0]['chat_id']
+        
+        # Sort messages by timestamp to ensure chronological order
+        import_messages.sort(key=lambda m: m.get('timestamp', 0))
+        
+        # Separate user and other messages
+        user_messages = []
+        other_messages = []
+        all_conversation = []
+        
+        for msg in import_messages:
+            text = msg['text']
+            
+            if msg['is_from_admin']:
+                user_messages.append(text)
+                all_conversation.append(('user', text))
+            else:
+                other_messages.append(text)
+                all_conversation.append(('assistant', text))
+        
+        # Add user messages as style examples
+        if user_messages:
+            self.llm.add_style_examples(chat_id, user_messages)
+            logger.info(f"Added {len(user_messages)} style examples for chat {chat_id}")
+        
+        # Build conversation history
+        conversation = self.llm._get_conversation(chat_id)
+        
+        # Add all messages to conversation
+        for role, text in all_conversation:
+            conversation.append({"role": role, "content": text})
+        
+        # Limit conversation history to last 20 messages (+ system)
+        if len(conversation) > 21:
+            self.llm.conversation_history[chat_id] = [conversation[0]] + conversation[-20:]
+        
+        # Add to active targets
+        self.active_targets.add(chat_id)
+        
+        # Save state
+        self._save_state()
+        
+        # Clear import mode
+        context.user_data['import_mode'] = False
+        context.user_data['import_messages'] = []
+        
+        await update.message.reply_text(
+            f"✅ Chat-Import erfolgreich abgeschlossen!\n\n"
+            f"📊 Statistik:\n"
+            f"• Deine Nachrichten: {len(user_messages)}\n"
+            f"• Spammer-Nachrichten: {len(other_messages)}\n"
+            f"• Gesamt: {len(import_messages)}\n\n"
+            f"🎯 Chat {chat_id} ist jetzt aktiv!\n"
+            f"Der Bot kennt den Gesprächsverlauf und imitiert deinen Schreibstil."
+        )
+        
+        logger.info(
+            f"Import completed for chat {chat_id}: "
+            f"{len(user_messages)} user, {len(other_messages)} other messages"
+        )
     
     async def timing_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Show or modify timing settings."""
@@ -305,6 +504,17 @@ class SpambotChatbot:
         )
         await update.message.reply_text(timing_info)
     
+    def _save_state(self) -> None:
+        """Save current bot state to storage."""
+        try:
+            self.storage.save_state(
+                active_targets=self.active_targets,
+                style_examples=self.llm.user_style_examples
+            )
+            logger.debug("State saved successfully")
+        except Exception as e:
+            logger.error(f"Failed to save state: {e}")
+    
     def _calculate_typing_delay(self, text: str) -> float:
         """Calculate realistic typing delay based on message length."""
         # Base delay on text length
@@ -321,7 +531,7 @@ class SpambotChatbot:
         if random.random() < self.occasional_long_pause_chance:
             extra_pause = random.uniform(*self.long_pause_duration)
             delay += extra_pause
-            print(f"[Timing] Längere Pause: {extra_pause:.1f}s (wirkt beschäftigt)")
+            logger.debug(f"Adding long pause: {extra_pause:.1f}s")
         
         return delay
     
@@ -342,22 +552,31 @@ class SpambotChatbot:
                 if wait_time > 0:
                     await asyncio.sleep(wait_time)
             except Exception as e:
-                print(f"[Typing] Fehler beim Senden des Typing-Indikators: {e}")
+                logger.warning(f"Failed to send typing indicator: {e}")
                 break
     
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle incoming messages from targets with natural timing."""
         chat_id = update.effective_chat.id
         
+        # Check if admin is in import mode - ignore non-forwarded messages
+        if self._is_admin(update.effective_user.id) and context.user_data.get('import_mode', False):
+            # In import mode, we only process forwarded messages
+            # Non-forwarded messages are ignored (they'll be commands like /done)
+            return
+        
         # Only respond to active targets
         if chat_id not in self.active_targets:
             return
         
         user_message = update.message.text
-        print(f"[Chat {chat_id}] Nachricht empfangen: {user_message[:50]}...")
+        logger.info(f"[Chat {chat_id}] Message received: {user_message[:50]}...")
         
         # Small initial delay (reading the message)
-        reading_delay = random.uniform(1.0, 3.0)
+        reading_delay = random.uniform(
+            self.timing.get("reading_delay_min", 1.0),
+            self.timing.get("reading_delay_max", 3.0)
+        )
         await asyncio.sleep(reading_delay)
         
         # Get LLM response
@@ -365,17 +584,43 @@ class SpambotChatbot:
         
         # Calculate realistic typing delay
         typing_delay = self._calculate_typing_delay(response)
-        print(f"[Timing] Verzögerung: {typing_delay:.1f}s für {len(response)} Zeichen")
+        logger.info(f"[Chat {chat_id}] Delay: {typing_delay:.1f}s for {len(response)} chars")
         
         # Show typing indicator while "composing" the message
         await self._send_typing_action(chat_id, typing_delay)
         
         # Send response
         await update.message.reply_text(response)
-        print(f"[Chat {chat_id}] Antwort gesendet: {response[:50]}...")
+        logger.info(f"[Chat {chat_id}] Response sent: {response[:50]}...")
     
-    def run(self) -> None:
+    async def run(self) -> None:
         """Start the bot."""
+        logger.info(f"🚀 Bot starting as '{self.personality.get_name()}'...")
+        logger.info(f"Admin User ID: {self.admin_user_id}")
+        logger.info(f"Active targets: {len(self.active_targets)}")
+        
         print(f"🚀 Bot startet als '{self.personality.get_name()}'...")
         print(f"Admin User ID: {self.admin_user_id}")
-        self.app.run_polling(allowed_updates=Update.ALL_TYPES)
+        print(f"Aktive Targets: {len(self.active_targets)}")
+        
+        try:
+            # Initialize and start the application
+            async with self.app:
+                await self.app.start()
+                await self.app.updater.start_polling(allowed_updates=Update.ALL_TYPES)
+                
+                # Keep the bot running until stopped
+                stop_event = asyncio.Event()
+                try:
+                    await stop_event.wait()
+                except (KeyboardInterrupt, SystemExit):
+                    logger.info("Shutdown signal received")
+                finally:
+                    # Stop polling
+                    await self.app.updater.stop()
+                    await self.app.stop()
+        finally:
+            # Save state on shutdown
+            logger.info("Saving state before shutdown...")
+            self._save_state()
+            logger.info("Bot shutdown complete")

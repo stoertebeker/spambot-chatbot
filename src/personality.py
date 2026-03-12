@@ -1,7 +1,10 @@
 """Personality loader and manager."""
 import json
+import logging
 from pathlib import Path
 from typing import Dict, Any
+
+logger = logging.getLogger(__name__)
 
 
 class PersonalityManager:
@@ -17,12 +20,12 @@ class PersonalityManager:
         try:
             with open(self.config_path, 'r', encoding='utf-8') as f:
                 self.personality = json.load(f)
-            print(f"Persönlichkeit geladen: {self.personality.get('name', 'Unbekannt')}")
+            logger.info(f"Personality loaded: {self.personality.get('name', 'Unknown')}")
         except FileNotFoundError:
-            print(f"Warnung: Persönlichkeitsdatei nicht gefunden: {self.config_path}")
+            logger.warning(f"Personality file not found: {self.config_path}")
             self._create_default_personality()
         except json.JSONDecodeError as e:
-            print(f"Fehler beim Parsen der Persönlichkeitsdatei: {e}")
+            logger.error(f"Error parsing personality file: {e}")
             self._create_default_personality()
     
     def _create_default_personality(self) -> None:
@@ -31,6 +34,7 @@ class PersonalityManager:
             "name": "Anna",
             "system_prompt": "Du bist eine freundliche Person, die gerne chattet."
         }
+        logger.info("Using default personality")
     
     def get_system_prompt(self) -> str:
         """Get the system prompt for the LLM."""

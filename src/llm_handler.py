@@ -1,17 +1,40 @@
 """LLM Handler using LiteLLM for flexible model support."""
 import os
+import time
+import logging
 from typing import List, Dict, Optional, Tuple
 from litellm import completion
+from litellm.exceptions import (
+    RateLimitError,
+    APIError,
+    Timeout,
+    ServiceUnavailableError
+)
+
+logger = logging.getLogger(__name__)
 
 
 class LLMHandler:
     """Handles LLM interactions via LiteLLM."""
     
-    def __init__(self, model: str = None, system_prompt: str = None):
+    def __init__(self, model: str = None, system_prompt: str = None, max_retries: int = 3):
         self.model = model or os.getenv("LITELLM_MODEL", "gpt-3.5-turbo")
         self.system_prompt = system_prompt or "Du bist ein hilfreicher Assistent."
         self.conversation_history: Dict[int, List[Dict[str, str]]] = {}
         self.user_style_examples: Dict[int, List[str]] = {}  # Store user's writing style
+        self.max_retries = max_retries
+        
+        # Set LiteLLM API base if provided
+        if os.getenv("LITELLM_API_BASE"):
+            os.environ["LITELLM_API_BASE"] = os.getenv("LITELLM_API_BASE")
+            logger.info(f"Using custom LiteLLM API base: {os.getenv('LITELLM_API_BASE')}")
+        
+        # Set API key if provided (LiteLLM will use it)
+        if os.getenv("LITELLM_API_KEY"):
+            os.environ["LITELLM_API_KEY"] = os.getenv("LITELLM_API_KEY")
+            logger.info("LiteLLM API key configured")
+        
+        logger.info(f"LLM Handler initialized with model: {self.model}")
         
     def _get_conversation(self, chat_id: int) -> List[Dict[str, str]]:
         """Get or create conversation history for a chat."""
@@ -32,7 +55,7 @@ class LLMHandler:
         return self.conversation_history[chat_id]
     
     async def get_response(self, chat_id: int, user_message: str) -> str:
-        """Generate a response using LiteLLM.
+        """Generate a response using LiteLLM with retry logic.
         
         Args:
             chat_id: Telegram chat ID
@@ -41,42 +64,80 @@ class LLMHandler:
         Returns:
             LLM's response
         """
-        try:
-            # Get conversation history
-            messages = self._get_conversation(chat_id)
+        # Get conversation history
+        messages = self._get_conversation(chat_id)
+        
+        # Add user message
+        messages.append({"role": "user", "content": user_message})
+        
+        # Try to get response with retries
+        for attempt in range(self.max_retries):
+            try:
+                logger.debug(f"LLM request attempt {attempt + 1}/{self.max_retries}")
+                
+                # Get completion from LiteLLM
+                response = completion(
+                    model=self.model,
+                    messages=messages,
+                    temperature=0.8,  # Etwas kreativere Antworten
+                    max_tokens=500
+                )
+                
+                # Extract response
+                assistant_message = response.choices[0].message.content
+                
+                # Add to history
+                messages.append({"role": "assistant", "content": assistant_message})
+                
+                # Limit conversation history to last 20 messages (+ system prompt)
+                if len(messages) > 21:
+                    self.conversation_history[chat_id] = [messages[0]] + messages[-20:]
+                
+                logger.info(f"LLM response generated successfully (length: {len(assistant_message)})")
+                return assistant_message
+                
+            except RateLimitError as e:
+                logger.warning(f"Rate limit error (attempt {attempt + 1}): {e}")
+                if attempt < self.max_retries - 1:
+                    wait_time = 2 ** attempt  # Exponential backoff
+                    logger.info(f"Waiting {wait_time}s before retry...")
+                    time.sleep(wait_time)
+                else:
+                    logger.error("Max retries reached for rate limit")
+                    return "Entschuldigung, zu viele Anfragen gerade. Versuch's gleich nochmal! 😅"
             
-            # Add user message
-            messages.append({"role": "user", "content": user_message})
+            except Timeout as e:
+                logger.warning(f"Timeout error (attempt {attempt + 1}): {e}")
+                if attempt < self.max_retries - 1:
+                    time.sleep(1)
+                else:
+                    logger.error("Max retries reached for timeout")
+                    return "Entschuldigung, das dauert gerade zu lange. Kannst du das wiederholen? 🤔"
             
-            # Get completion from LiteLLM
-            response = completion(
-                model=self.model,
-                messages=messages,
-                temperature=0.8,  # Etwas kreativere Antworten
-                max_tokens=500
-            )
+            except ServiceUnavailableError as e:
+                logger.warning(f"Service unavailable (attempt {attempt + 1}): {e}")
+                if attempt < self.max_retries - 1:
+                    time.sleep(2)
+                else:
+                    logger.error("Max retries reached for service unavailable")
+                    return "Hmm, irgendwas klappt gerade nicht. Versuchen wir's später nochmal? 😊"
             
-            # Extract response
-            assistant_message = response.choices[0].message.content
+            except APIError as e:
+                logger.error(f"API error: {e}")
+                return "Entschuldigung, da ist was schiefgelaufen. 😅"
             
-            # Add to history
-            messages.append({"role": "assistant", "content": assistant_message})
-            
-            # Limit conversation history to last 20 messages (+ system prompt)
-            if len(messages) > 21:
-                self.conversation_history[chat_id] = [messages[0]] + messages[-20:]
-            
-            return assistant_message
-            
-        except Exception as e:
-            print(f"Fehler bei LLM-Anfrage: {e}")
-            return "Entschuldigung, ich habe gerade Schwierigkeiten zu antworten. 😅"
+            except Exception as e:
+                logger.exception(f"Unexpected error in LLM request: {e}")
+                return "Entschuldigung, ich habe gerade Schwierigkeiten zu antworten. 😅"
+        
+        # Should never reach here, but just in case
+        return "Entschuldigung, ich habe gerade Schwierigkeiten zu antworten. 😅"
     
     def reset_conversation(self, chat_id: int) -> None:
         """Reset conversation history for a specific chat."""
         if chat_id in self.conversation_history:
             del self.conversation_history[chat_id]
-        print(f"Konversation für Chat {chat_id} zurückgesetzt.")
+        logger.info(f"Conversation reset for chat {chat_id}")
     
     def set_system_prompt(self, prompt: str) -> None:
         """Update the system prompt."""
@@ -110,7 +171,7 @@ class LLMHandler:
         if chat_id in self.conversation_history:
             del self.conversation_history[chat_id]
         
-        print(f"Stil-Beispiele für Chat {chat_id} hinzugefügt: {len(examples)} Nachrichten")
+        logger.info(f"Style examples added for chat {chat_id}: {len(examples)} messages")
     
     def get_style_examples(self, chat_id: int) -> List[str]:
         """Get stored style examples for a chat."""
@@ -139,6 +200,7 @@ class LLMHandler:
             analysis_prompt += f"{i}. {msg}\n"
         
         try:
+            logger.info("Analyzing user writing style...")
             response = completion(
                 model=self.model,
                 messages=[
@@ -149,7 +211,9 @@ class LLMHandler:
                 max_tokens=300
             )
             
-            return response.choices[0].message.content
+            analysis = response.choices[0].message.content
+            logger.info("Style analysis completed")
+            return analysis
         except Exception as e:
-            print(f"Fehler bei Stil-Analyse: {e}")
+            logger.exception(f"Error in style analysis: {e}")
             return f"Fehler bei der Analyse: {e}"

@@ -19,6 +19,18 @@ ENV/
 
 # Logs
 *.log
+logs/*.log
+logs/*.log.*
+
+# Data
+data/*.json
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+
+# Keep directory structure
+!logs/.gitkeep
+!data/.gitkeep
 
 # OS
 .DS_Store
