@@ -1,6 +1,5 @@
 """Tests für BotStorage."""
 import json
-import pytest
 from src.storage import BotStorage
 
 

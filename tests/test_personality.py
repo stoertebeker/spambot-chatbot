@@ -1,6 +1,5 @@
 """Tests für PersonalityManager."""
 import json
-import pytest
 from src.personality import PersonalityManager
 
 

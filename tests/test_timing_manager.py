@@ -1,6 +1,5 @@
 """Tests für TimingManager."""
 import json
-import pytest
 from src.timing_manager import TimingManager
 
 
