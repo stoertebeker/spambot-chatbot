@@ -65,7 +65,7 @@ async def main():
     api_id = int(os.getenv("TELEGRAM_API_ID"))
     api_hash = os.getenv("TELEGRAM_API_HASH")
     
-    logger.info(f"Configuration validated successfully")
+    logger.info("Configuration validated successfully")
     
     # Try to load existing session
     storage = BotStorage()

@@ -2,7 +2,7 @@
 import os
 import time
 import logging
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict
 from litellm import completion
 from litellm.exceptions import (
     RateLimitError,
@@ -97,7 +97,7 @@ class LLMHandler:
                 if len(messages) > 21:
                     self.conversation_history[chat_id] = [messages[0]] + messages[-20:]
                 
-                logger.info(f"✅ LLM response generated successfully")
+                logger.info("✅ LLM response generated successfully")
                 logger.info(f"   Model: {self.model}")
                 logger.info(f"   Response length: {len(assistant_message)} chars")
                 logger.info(f"   Response: {assistant_message}")
