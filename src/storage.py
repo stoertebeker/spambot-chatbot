@@ -1,7 +1,7 @@
 """Storage handler for bot state persistence."""
 import json
 from pathlib import Path
-from typing import Set, Dict, List, Any, Tuple
+from typing import Set, Dict, List, Tuple
 import logging
 
 logger = logging.getLogger(__name__)

@@ -1,10 +1,9 @@
 """Telegram Userbot for automatic spam responses."""
-import os
 import asyncio
 import logging
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
-from typing import Set, Optional
+from typing import Optional
 import random
 
 from .llm_handler import LLMHandler
@@ -105,9 +104,6 @@ class SpamResponderUserbot:
         """Handle commands sent to Saved Messages."""
         text = event.message.text.strip()
         
-        # Get the actual Saved Messages chat
-        me = await self.client.get_me()
-        
         if text.startswith('/whitelist_add'):
             parts = text.split()
             if len(parts) != 2:
@@ -120,7 +116,7 @@ class SpamResponderUserbot:
                 self._save_state()
                 
                 logger.info("="*80)
-                logger.info(f"➕ WHITELIST ADD")
+                logger.info("➕ WHITELIST ADD")
                 logger.info(f"   User ID: {user_id}")
                 logger.info(f"   Total whitelisted: {len(self.whitelist)}")
                 logger.info("="*80)
@@ -142,7 +138,7 @@ class SpamResponderUserbot:
                     self._save_state()
                     
                     logger.info("="*80)
-                    logger.info(f"➖ WHITELIST REMOVE")
+                    logger.info("➖ WHITELIST REMOVE")
                     logger.info(f"   User ID: {user_id}")
                     logger.info(f"   Total whitelisted: {len(self.whitelist)}")
                     logger.info("="*80)
@@ -266,7 +262,7 @@ class SpamResponderUserbot:
         
         # LOG: Incoming message
         logger.info("="*80)
-        logger.info(f"📨 INCOMING MESSAGE")
+        logger.info("📨 INCOMING MESSAGE")
         logger.info(f"   User ID: {user_id}")
         logger.info(f"   Username: @{username}")
         logger.info(f"   Message: {message_text}")
@@ -276,7 +272,7 @@ class SpamResponderUserbot:
         
         # Check if paused
         if self.paused:
-            logger.info(f"⏭️  Ignoring message - Bot is paused")
+            logger.info("⏭️  Ignoring message - Bot is paused")
             return
         
         # Check whitelist
@@ -293,7 +289,7 @@ class SpamResponderUserbot:
         await asyncio.sleep(reading_delay)
         
         # Get LLM response
-        logger.info(f"🤖 Requesting LLM response...")
+        logger.info("🤖 Requesting LLM response...")
         response = await self.llm.get_response(user_id, message_text)
         
         # Calculate typing delay
@@ -309,7 +305,7 @@ class SpamResponderUserbot:
         
         # LOG: Outgoing message
         logger.info("="*80)
-        logger.info(f"📤 OUTGOING MESSAGE")
+        logger.info("📤 OUTGOING MESSAGE")
         logger.info(f"   User ID: {user_id}")
         logger.info(f"   Response: {response}")
         logger.info(f"   Length: {len(response)} chars")
@@ -362,7 +358,7 @@ class SpamResponderUserbot:
         logger.info(f"Whitelisted users: {len(self.whitelist)}")
         
         print("="*60)
-        print(f"✅ Userbot started successfully!")
+        print("✅ Userbot started successfully!")
         print(f"Logged in as: {me.first_name} (@{me.username})")
         print(f"Whitelisted users: {len(self.whitelist)}")
         print("="*60)
