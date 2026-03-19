@@ -10,4 +10,5 @@ python-dotenv==1.0.0
 
 # Testing
 pytest==9.0.2
+ruff==0.15.6
 
